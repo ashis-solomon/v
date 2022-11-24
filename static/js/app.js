@@ -27,6 +27,16 @@ let search_trackUrl = [];
 let search_ReleaseDate = [];
 let search_display = [];
 
+// Splash Screen
+
+const splash = document.querySelector('.splash');
+
+document.addEventListener('DOMContentLoaded',(e)=>{
+    setTimeout(()=>{
+        splash.classList.add('display-none');
+    },2000);
+})
+
 
 // GENERATE ACCESS-TOKEN USING REFRESH-TOKEN
 
@@ -55,10 +65,22 @@ function handleAuthorizationResponse() {
 
 function onPageLoad(){
     console.log('PageLoad');
+
+    if( window.localStorage ){
+    if( !localStorage.getItem('firstLoad') ){
+      localStorage['firstLoad'] = true;
+      window.location.reload();
+    }  
+    else{
+        localStorage.removeItem('firstLoad');
+    }
+  }
+    
+  
     refreshAccessToken();
     setTimeout(() => {  
         access_token = window.sessionStorage.getItem('access_token');
-        enable_newReleases(); }, 400);
+        enable_newReleases(); }, 1000);
     // enable_newReleases();
 }
 
@@ -89,7 +111,7 @@ async function enable_searchItem(query) {
     let market = 'US'
     let url = `${SEARCH_URL}?q=${query}&type=track&market=${market}&limit=${limit}&offset=${offset}`
     let resp = await searchItem(url)
-    console.log(1)
+
     console.log(resp)
     
     for(let i=0; i<resp['tracks']['items'].length; i++){
@@ -134,18 +156,7 @@ async function enable_searchItem(query) {
         }
         search_display[i] = search_trackNames[i] + ' - ' + artist_str
     }
-    // for(let i = 0; i < 6; i++){
-    //     suggest_list.children[i].text = 'a';
-    // }
-    for(let i = 0; i < search_display.length; i++){
-        console.log(search_display[i])
-        suggest_list.children[i].text = search_display[i];
-    }
-    console.log('---------------')
-    for(let i = 0; i < search_display.length; i++){
-        console.log(suggest_list.children[i].text)
-    }
-    console.log(2)
+    
 }
     
 function resolve_searchID(str){
@@ -153,31 +164,5 @@ function resolve_searchID(str){
         if(search_display[i] == str){
             return i;
         }
-    }
-}
-
-// keyUP Listener on SeachBox
-
-inputTrack.addEventListener('keyup', keyfunc)
-
-function keyfunc(e) {
-    e.preventDefault();
-    if(inputTrack.value != ''){
-        enable_searchItem(inputTrack.value)
-        //suggestions1 = search_display
-        let resolved_id = resolve_searchID(inputTrack.value)
-        localStorage.setItem('trackDisplayName',search_display[resolved_id])
-        localStorage.setItem('trackID',search_trackIDs[resolved_id])
-        localStorage.setItem('artistIDs',search_artistIDs[resolved_id])
-        localStorage.setItem('trackExplicit',search_trackExplicit[resolved_id])
-        localStorage.setItem('trackReleaseDate',search_ReleaseDate[resolved_id])
-        localStorage.setItem('trackPopularity',search_trackPopularity[resolved_id])
-        localStorage.setItem('trackUrl',search_trackUrl[resolved_id])
-
-        let route_pass = search_trackIDs[resolved_id] + ',' + search_trackNames[resolved_id] + ',' + search_trackPopularity[resolved_id]
-        localStorage.setItem('routePass',route_pass)
-        
-        input_hidden.value = route_pass
-        // console.log(`hiddenvalue  -  ${input_hidden.value}`)
     }
 }

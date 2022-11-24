@@ -21,6 +21,8 @@ section {
     text-align: center;
 } */
 
+
+
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
 *{
   margin: 0;
@@ -29,7 +31,7 @@ section {
   font-family: 'Poppins', sans-serif;
 }
 
-body{
+/* body{
   background: #644bff;
   padding: 0 20px;
 }
@@ -37,7 +39,7 @@ body{
 ::selection{
   color: #fff;
   background: #664AFF;
-}
+} */
 
 .wrapper{
   max-width: 450px;
@@ -110,3 +112,54 @@ body{
   cursor: pointer;
 }
 
+body{
+  margin:0%;
+  padding: 0%;
+  overflow-x: hidden;
+}
+.splash
+{
+  position: fixed;
+  top:0;
+  left:0;
+  width: 100%;
+  height:100vh;
+  background: black;
+  color: azure;
+  z-index: 200;
+  text-align: center;
+  line-height: 90vh;
+}
+.splash.display-none
+{
+position: fixed;
+opacity:0;
+top:0;
+left: 0;
+width: 100%;
+height: 100vh;
+background: black;
+z-index: -10;
+color: white;
+text-align: center;
+line-height:90vh;
+}
+
+@keyframes fadeIn {
+  to
+  {
+      opacity: 1;
+  }
+  
+}
+.fade-in
+{
+  opacity: 0;
+  animation: fadeIn 2s ease-in forwards;
+}
+
+.fade-out
+{
+  opacity: 0;
+  animation: fadeOut 2s;
+}
