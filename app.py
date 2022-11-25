@@ -3,6 +3,11 @@ import json
 import pandas as pd
 import pickle
 import joblib
+import snscrape.modules.twitter as sntwitter
+import re
+import nltk
+from nltk.stem import WordNetLemmatizer
+nltk.download('stopwords')
 app = Flask(__name__)
 
 
@@ -28,8 +33,24 @@ def stat():
     items=pass_str.split('!@#$%')
     #print(items)
     print("hey")
+    x_x=[]
+    #y=pd.DataFrame()
     x=json.loads(items[0])
-    y=pd.DataFrame(x)
+    print("hey")
+    for i in x:
+     #  weight = isinstance(i, nonetype)
+       
+     if type(i) is type(None):
+      print("Can't find song")
+     else:
+      x_x.append(i)
+       #else:
+       #  print("False")  
+      # print(i)
+      # print("hy")
+       #print(type(i))
+    y=pd.DataFrame(x_x)
+    #print(y)
     df=y.sort_values(by=['popularity'], ascending=False)
     df.drop(['type','uri','track_href','id','analysis_url'], axis=1,inplace=True)
     dfx=df.drop_duplicates(subset=['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness',
@@ -102,9 +123,10 @@ def stat():
     tempo_ar = float(dfdict["tempo_ar"])
     valence_ar = float(dfdict["valence_ar"])
     popularity_ar = float(dfdict["popularity_ar"])
+    #popularity_ar=float(popularity_ar/2)
     #popularity_ar = float(items[1])
-    #if(popularity_ar<36):
-    #   popularity_ar=float(items[1])
+    if(popularity_ar<35):
+       popularity_ar=float(items[1])
     model = joblib.load('model.pkl')
     prediction=model.predict([[acousticness,danceability,duration_ms,energy,explicit,instrumentalness,liveness,loudness,speechiness,tempo,valence,year,
     key_1,key_2,key_3,key_4,key_5,key_6,key_7,key_8,key_9,key_10,key_11,mode,acousticness_ar,
@@ -117,7 +139,126 @@ def stat():
     #print("hey")
    # print(items[2])
     # print(request.form)
-    return render_template('stat.html',pass_str=pass_str,output=output)
+    #----------------------------------------------------------------------------------------------------------------
+
+    datearr = items[4].split("-")
+    datearr[0] = int(datearr[0]) + 3
+    
+    tweets_list = []
+
+    query = items[3].replace("-"," ")
+    start_date = items[4]
+    end_date = f'{datearr[0]}-{datearr[1]}-{datearr[2]}'
+
+    print(query)
+    print(start_date)
+    print(end_date)
+
+    for i,tweet in enumerate(sntwitter.TwitterSearchScraper(f'{query} since:{start_date} until:{end_date}').get_items()):
+        if i>100:
+            break
+        if(tweet.lang == 'en' and tweet.likeCount>=0):
+            tweets_list.append([tweet.content, tweet.url, tweet.date, tweet.likeCount, tweet.lang])
+        
+    cols = ['text', 'url', 'datetime', 'likeCount', 'lang']
+    tweets_df = pd.DataFrame(tweets_list, columns=cols)
+    tweets_df.sort_values(by=['likeCount'], inplace=True, ascending=False)
+    tweets_df.reset_index(drop=True, inplace=True)
+
+    print(len(tweets_df))
+    print(tweets_df)
+    
+    tweets=[]
+    for i in tweets_df['text']:
+        tweets.append(i)
+
+    emojis = {':)': 'smile', ':-)': 'smile', ';d': 'wink', ':-E': 'vampire', ':(': 'sad', 
+          ':-(': 'sad', ':-<': 'sad', ':P': 'raspberry', ':O': 'surprised',
+          ':-@': 'shocked', ':@': 'shocked',':-$': 'confused', ':\\': 'annoyed', 
+          ':#': 'mute', ':X': 'mute', ':^)': 'smile', ':-&': 'confused', '$_$': 'greedy',
+          '@@': 'eyeroll', ':-!': 'confused', ':-D': 'smile', ':-0': 'yell', 'O.o': 'confused',
+          '<(-_-)>': 'robot', 'd[-_-]b': 'dj', ":'-)": 'sadsmile', ';)': 'wink', 
+          ';-)': 'wink', 'O:-)': 'angel','O*-)': 'angel','(:-D': 'gossip', '=^.^=': 'cat'}
+
+    stopwordlist = nltk.corpus.stopwords.words('english')
+
+    def preprocess(textdata):
+        processedText = []
+        
+        # Create Lemmatizer and Stemmer.
+        wordLemm = WordNetLemmatizer()
+        
+        # Defining regex patterns.
+        urlPattern        = r"((http://)[^ ]*|(https://)[^ ]*|( www\.)[^ ]*)"
+        userPattern       = '@[^\s]+'
+        alphaPattern      = "[^a-zA-Z0-9]"
+        sequencePattern   = r"(.)\1\1+"
+        seqReplacePattern = r"\1\1"
+        
+        for tweet in textdata:
+            tweet = tweet.lower()
+            
+            # Replace all URls with 'URL'
+            tweet = re.sub(urlPattern,' URL',tweet)
+            # Replace all emojis.
+            for emoji in emojis.keys():
+                tweet = tweet.replace(emoji, "EMOJI" + emojis[emoji])        
+            # Replace @USERNAME to 'USER'.
+            tweet = re.sub(userPattern,' USER', tweet)        
+            # Replace all non alphabets.
+            tweet = re.sub(alphaPattern, " ", tweet)
+            # Replace 3 or more consecutive letters by 2 letter.
+            tweet = re.sub(sequencePattern, seqReplacePattern, tweet)
+
+            tweetwords = ''
+            for word in tweet.split():
+                # Checking if the word is a stopword.
+                #if word not in stopwordlist:
+                if len(word)>1:
+                    # Lemmatizing the word.
+                    word = wordLemm.lemmatize(word)
+                    tweetwords += (word+' ')
+                
+            processedText.append(tweetwords)
+            
+        return processedText
+
+    def load_models():
+        # Load the vectoriser.
+        file = open('./vectoriser-ngram-(1,2).pickle', 'rb')
+        vectoriser = pickle.load(file)
+        file.close()
+        # Load the LR Model.
+        file = open('./Sentiment-LR.pickle', 'rb')
+        LRmodel = pickle.load(file)
+        file.close()
+        
+        return vectoriser, LRmodel
+
+    def predict(vectoriser, model, text):
+        # Predict the sentimentey
+        textdata = vectoriser.transform(preprocess(text))
+        sentiment = model.predict(textdata)
+        
+        # Make a list of text with sentiment.
+        data = []
+        for text, pred in zip(text, sentiment):
+            data.append((text,pred))
+            
+        # Convert the list into a Pandas DataFrame.
+        df = pd.DataFrame(data, columns = ['tweet','sentiment'])
+        df = df.replace([0,1], ["Negative","Positive"])
+        return df
+
+    vectoriser, LRmodel = load_models()
+    df = predict(vectoriser, LRmodel, tweets)
+    a=len(df[df["sentiment"]=="Positive"])
+    b=len(df)
+    print(a/b*100)
+    repIndex = a/b*100
+    repIndex = round(repIndex,2)
+# ----------------------------------------------------------------------------------------------------------------
+    return render_template('stat.html',pass_str=pass_str,output=output.upper(), repIndex=repIndex)
 
 @app.route('/chart')
 def chart():
@@ -204,7 +345,7 @@ def statTRY():
 
 
     #print(x)
-    return render_template('statTRY.html',output=output)
+    return render_template('statTRY.html',output=output.upper())
 
 @app.route('/about')
 def about():

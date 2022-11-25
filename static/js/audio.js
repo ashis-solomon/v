@@ -422,7 +422,7 @@ async function enable_track_audio(trkurl,jsonfinaldata)
     const myJSON1 = JSON.stringify(avgg[0]);
     console.log(myJSON1)
     
-    let route_pass = myJSON + `!@#$%${localStorage.getItem('artistPop')}` + `!@#$%${myJSON1}`;
+    let route_pass = myJSON + `!@#$%${localStorage.getItem('artistPop')}` + `!@#$%${myJSON1}` + `!@#$%${localStorage.getItem('trackDisplayName')}` + `!@#$%${localStorage.getItem('release_date_')}`;
 
     // console.log(route_pass)
     input_hidden.value = route_pass
